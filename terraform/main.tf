@@ -1,0 +1,218 @@
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+  }
+  required_version = ">= 1.0"
+}
+
+provider "google" {
+  project = var.gcp_project_id
+  region  = var.gcp_region
+  zone    = var.gcp_zone
+}
+
+# VPC Network
+resource "google_compute_network" "app_network" {
+  name                    = "app-network"
+  auto_create_subnetworks = false
+}
+
+# Subnet
+resource "google_compute_subnetwork" "app_subnet" {
+  name          = "app-subnet"
+  ip_cidr_range = "10.0.1.0/24"
+  region        = var.gcp_region
+  network       = google_compute_network.app_network.id
+}
+
+# Firewall Rules
+resource "google_compute_firewall" "allow_http" {
+  name    = "allow-http"
+  network = google_compute_network.app_network.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["http-server"]
+}
+
+resource "google_compute_firewall" "allow_https" {
+  name    = "allow-https"
+  network = google_compute_network.app_network.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["443"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["https-server"]
+}
+
+resource "google_compute_firewall" "allow_ssh" {
+  name    = "allow-ssh"
+  network = google_compute_network.app_network.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["ssh-server"]
+}
+
+resource "google_compute_firewall" "allow_health_check" {
+  name    = "allow-health-check"
+  network = google_compute_network.app_network.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80"]
+  }
+
+  source_ranges = ["35.191.0.0/16", "130.211.0.0/22"]
+  target_tags   = ["http-server"]
+}
+
+# Compute Instance
+resource "google_compute_instance" "app_server" {
+  name         = "app-server"
+  machine_type = var.machine_type
+  zone         = var.gcp_zone
+
+  tags = ["http-server", "https-server", "ssh-server"]
+
+  boot_disk {
+    initialize_params {
+      image = var.boot_image
+      size  = 20
+      type  = "pd-standard"
+    }
+  }
+
+  network_interface {
+    network    = google_compute_network.app_network.id
+    subnetwork = google_compute_subnetwork.app_subnet.id
+
+    access_config {
+      // Ephemeral public IP
+    }
+  }
+
+  metadata = {
+    ssh-keys = "${var.ssh_user}:${file(var.ssh_public_key_path)}"
+  }
+
+  metadata_startup_script = <<-EOF
+    #!/bin/bash
+    apt-get update
+  EOF
+
+  service_account {
+    scopes = ["cloud-platform"]
+  }
+}
+
+# Instance Group
+resource "google_compute_instance_group" "app_instance_group" {
+  name = "app-instance-group"
+  zone = var.gcp_zone
+
+  instances = [
+    google_compute_instance.app_server.id
+  ]
+
+  named_port {
+    name = "http"
+    port = 80
+  }
+}
+
+# Health Check
+resource "google_compute_health_check" "app_health_check" {
+  name                = "app-health-check"
+  check_interval_sec  = 5
+  timeout_sec         = 5
+  healthy_threshold   = 2
+  unhealthy_threshold = 2
+
+  http_health_check {
+    port         = 80
+    request_path = "/health"
+  }
+}
+
+# Backend Service
+resource "google_compute_backend_service" "app_backend" {
+  name          = "app-backend-service"
+  protocol      = "HTTP"
+  timeout_sec   = 10
+  health_checks = [google_compute_health_check.app_health_check.id]
+
+  backend {
+    group           = google_compute_instance_group.app_instance_group.id
+    balancing_mode  = "UTILIZATION"
+    capacity_scaler = 1.0
+  }
+}
+
+# URL Map
+resource "google_compute_url_map" "app_url_map" {
+  name            = "app-url-map"
+  default_service = google_compute_backend_service.app_backend.id
+}
+
+# HTTP Proxy
+resource "google_compute_target_http_proxy" "app_http_proxy" {
+  name    = "app-http-proxy"
+  url_map = google_compute_url_map.app_url_map.id
+}
+
+resource "google_compute_global_address" "app_lb_ip" {
+  name = "app-lb-ip"
+}
+
+
+# Global Forwarding Rule (Load Balancer)
+resource "google_compute_global_forwarding_rule" "app_forwarding_rule" {
+  name                  = "app-forwarding-rule"
+  target                = google_compute_target_http_proxy.app_http_proxy.id
+  port_range            = "80"
+  ip_protocol           = "TCP"
+  load_balancing_scheme = "EXTERNAL"
+  ip_address            = google_compute_global_address.app_lb_ip.id
+}
+
+# DNS Zone (Cloud DNS) - используется только если управляем всей зоной
+# Для поддомена основного домена это не нужно, закомментировано
+# resource "google_dns_managed_zone" "app_dns_zone" {
+#   name        = "app-dns-zone"
+#   dns_name    = "${var.root_domain}."
+#   description = "DNS zone for application"
+# }
+
+# Если используем поддомен существующего домена, DNS записи создаём вручную
+# или используем существующую зону в Cloud DNS (если домен уже там)
+
+# Internet Gateway
+resource "google_compute_router" "app_router" {
+  name    = "app-router"
+  network = google_compute_network.app_network.id
+  region  = var.gcp_region
+}
+
+resource "google_compute_router_nat" "app_nat" {
+  name                               = "app-nat"
+  router                             = google_compute_router.app_router.name
+  region                             = var.gcp_region
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+}
+

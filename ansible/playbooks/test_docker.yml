@@ -1,0 +1,32 @@
+---
+- name: Verify Docker installation on app servers
+  hosts: app_servers
+  become: yes
+
+  tasks:
+    - name: Check Docker package installation
+      command: docker --version
+      register: docker_version
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display Docker version
+      debug:
+        msg: "{{ docker_version.stdout | default('Docker not installed or not in PATH') }}"
+
+    - name: Check Docker service status
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+
+    - name: Run test container
+      command: docker run --rm hello-world
+      register: test_container
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display test container result
+      debug:
+        msg: "{{ test_container.stdout | default('Error running hello-world container') }}"
+
