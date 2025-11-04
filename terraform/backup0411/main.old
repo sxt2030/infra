@@ -126,7 +126,7 @@ resource "google_compute_instance_group" "app_instance_group" {
   zone = var.gcp_zone
 
   instances = [
-    google_compute_instance.app_server.id
+    google_compute_instance.app_server.self_link
   ]
 
   named_port {
@@ -216,31 +216,31 @@ resource "google_compute_router_nat" "app_nat" {
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }
 
-resource "google_compute_instance" "gitlab-server" {
+resource "google_compute_instance" "gitlab_server" {
   name         = "gitlab-server"
   machine_type = "e2-standard-2"
-  zone         = "us-west4-c"
+  zone         = var.gcp_zone
+  
+  allow_stopping_for_update = true
+
+  tags = ["http-server", "https-server", "ssh-server"]
 
   boot_disk {
     initialize_params {
-      image = "ubuntu-2204-jammy-v20251023"
+      image = "ubuntu-os-cloud/ubuntu-2204-lts"
       size  = 30
-      type  = "pd-standard"
     }
   }
 
   network_interface {
-    network    = "app-network"
-    subnetwork = "app-subnet"
-    access_config {
-      nat_ip = "34.50.169.169"
-    }
+    network    = google_compute_network.app_network.id
+    subnetwork = google_compute_subnetwork.app_subnet.id
+
+    access_config {}
   }
 
   metadata = {
-    ssh-keys = "ubuntu:ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC... maxpack2030@gmail.com"
+    ssh-keys = "${var.ssh_user}:${file(var.ssh_public_key_path)}"
   }
-
-  tags = ["http-server", "https-server", "ssh-server"]
 }
 

@@ -1,0 +1,37 @@
+---
+- name: Register GitLab Runner
+  hosts: gitlab
+  become: true
+  vars:
+    gitlab_url: "http://ci.avtostrada.kz"
+    runner_name: "gitlab-runner-1"
+    runner_tags: "docker,deploy"
+  tasks:
+    - name: Install Docker for Runner
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+    
+    - name: Add gitlab-runner user to docker group
+      user:
+        name: gitlab-runner
+        groups: docker
+        append: yes
+    
+    - name: Display runner registration instructions
+      debug:
+        msg: |
+          To register the runner, you need to:
+          1. Go to http://ci.avtostrada.kz/admin/runners
+          2. Get the registration token
+          3. Run: sudo gitlab-runner register \
+               --non-interactive \
+               --url "{{ gitlab_url }}" \
+               --registration-token "YOUR_TOKEN" \
+               --executor "docker" \
+               --docker-image "alpine:latest" \
+               --description "{{ runner_name }}" \
+               --tag-list "{{ runner_tags }}" \
+               --run-untagged="true" \
+               --locked="false"

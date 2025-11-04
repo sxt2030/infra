@@ -35,7 +35,7 @@
 
     - name: Configure Docker daemon (optional tuning)
       template:
-        src: ../templates/docker_daemon.json.j2
+        src: infra/ansible/templates/docker_daemon.json.j2
         dest: /etc/docker/daemon.json
         mode: '0644'
       notify:
