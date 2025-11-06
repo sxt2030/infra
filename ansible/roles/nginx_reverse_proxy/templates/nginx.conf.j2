@@ -1,0 +1,11 @@
+server {
+    listen 80;
+    server_name {{ domain_name | default(inventory_hostname) }};
+
+    location / {
+        proxy_pass http://127.0.0.1:{{ '9090' if 'prometheus' in group_names else '3000' }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+

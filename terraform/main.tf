@@ -244,3 +244,92 @@ resource "google_compute_instance" "gitlab-server" {
   tags = ["http-server", "https-server", "ssh-server"]
 }
 
+# =========================================================
+# Monitoring Infrastructure (Prometheus + Grafana)
+# =========================================================
+
+# Firewall for monitoring traffic
+resource "google_compute_firewall" "allow_monitoring_traffic" {
+  name    = "allow-monitoring-traffic"
+  network = google_compute_network.app_network.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22", "80", "443", "3000", "9090", "9100"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["monitoring", "grafana"]
+}
+
+# === Prometheus VM ===
+resource "google_compute_instance" "prometheus_vm" {
+  name         = "prometheus-vm"
+  machine_type = "e2-micro"
+  zone         = var.gcp_zone
+
+  tags = ["monitoring", "ssh-server"]
+
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-2204-jammy-v20251023"
+      size  = 10
+      type  = "pd-balanced"
+    }
+  }
+
+  network_interface {
+    network    = google_compute_network.app_network.id
+    subnetwork = google_compute_subnetwork.app_subnet.id
+    access_config {} # ephemeral public IP
+  }
+
+  metadata = {
+    ssh-keys = "${var.ssh_user}:${file(var.ssh_public_key_path)}"
+  }
+
+  service_account {
+    scopes = ["cloud-platform"]
+  }
+}
+
+# === Grafana VM ===
+resource "google_compute_instance" "grafana_vm" {
+  name         = "grafana-vm"
+  machine_type = "e2-small"
+  zone         = var.gcp_zone
+
+  allow_stopping_for_update = true
+  tags = ["grafana", "ssh-server"]
+
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-2204-jammy-v20251023"
+      size  = 20
+      type  = "pd-balanced"
+    }
+  }
+
+  network_interface {
+    network    = google_compute_network.app_network.id
+    subnetwork = google_compute_subnetwork.app_subnet.id
+    access_config {}
+  }
+
+  metadata = {
+    ssh-keys = "${var.ssh_user}:${file(var.ssh_public_key_path)}"
+  }
+
+  service_account {
+    scopes = ["cloud-platform"]
+  }
+}
+
+output "prometheus_ip" {
+  value = google_compute_instance.prometheus_vm.network_interface[0].access_config[0].nat_ip
+}
+
+output "grafana_ip" {
+  value = google_compute_instance.grafana_vm.network_interface[0].access_config[0].nat_ip
+}
+

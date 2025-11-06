@@ -1,0 +1,28 @@
+---
+- name: Deploy Prometheus stack
+  hosts: prometheus
+  become: yes
+  tags:
+    - prometheus
+    - monitoring
+  roles:
+    - node_exporter
+    - prometheus
+    - nginx_reverse_proxy
+
+- name: Deploy Grafana stack
+  hosts: grafana
+  become: yes
+  tags:
+    - grafana
+    - monitoring
+  roles:
+    - grafana
+    - nginx_reverse_proxy
+
+- hosts: app_servers
+  become: yes
+  roles:
+    - node_exporter
+    
+

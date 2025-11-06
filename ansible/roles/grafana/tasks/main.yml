@@ -1,0 +1,122 @@
+---
+- name: Install Grafana dependencies
+  become: yes
+  ansible.builtin.apt:
+    name:
+      - wget
+      - gnupg2
+      - apt-transport-https
+    state: present
+    update_cache: yes
+
+- name: Add Grafana APT repo manually
+  become: yes
+  ansible.builtin.shell: |
+    echo "deb https://packages.grafana.com/oss/deb stable main" > /etc/apt/sources.list.d/grafana.list
+    wget -q -O - https://packages.grafana.com/gpg.key | apt-key add -
+  args:
+    creates: /etc/apt/sources.list.d/grafana.list
+
+- name: Install Grafana
+  become: yes
+  ansible.builtin.apt:
+    name: grafana
+    state: present
+    update_cache: yes
+
+- name: Create provisioning directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: grafana
+    group: grafana
+    mode: "0755"
+  loop:
+    - /etc/grafana/provisioning
+    - /etc/grafana/provisioning/datasources
+    - /etc/grafana/provisioning/dashboards
+    - /var/lib/grafana/dashboards
+
+- name: Deploy custom Grafana configuration
+  ansible.builtin.template:
+    src: grafana.ini.j2
+    dest: /etc/grafana/grafana.ini
+    owner: grafana
+    group: grafana
+    mode: '0644'
+  notify: restart grafana
+
+- name: Deploy Prometheus datasource
+  ansible.builtin.template:
+    src: provisioning/datasources/prometheus.yml.j2
+    dest: /etc/grafana/provisioning/datasources/prometheus.yml
+    owner: grafana
+    group: grafana
+    mode: "0644"
+  notify: restart grafana
+
+- name: Deploy dashboards provisioning config
+  ansible.builtin.copy:
+    dest: /etc/grafana/provisioning/dashboards/dashboards.yml
+    content: |
+      apiVersion: 1
+      providers:
+        - name: 'Local'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          updateIntervalSeconds: 10
+          allowUiUpdates: true
+          options:
+            path: /var/lib/grafana/dashboards
+    owner: grafana
+    group: grafana
+    mode: '0644'
+  notify: restart grafana
+
+- name: Download Node Exporter Full dashboard JSON
+  ansible.builtin.get_url:
+    url: https://grafana.com/api/dashboards/1860/revisions/30/download
+    dest: /var/lib/grafana/dashboards/node_exporter_full.json
+    owner: grafana
+    group: grafana
+    mode: "0644"
+  notify: restart grafana
+
+- name: Copy system overview dashboard
+  ansible.builtin.copy:
+    src: system_app_overview_dashboard.json
+    dest: /var/lib/grafana/dashboards/system_app_overview.json
+    owner: grafana
+    group: grafana
+    mode: '0644'
+  notify: restart grafana
+
+- name: Deploy Go Application dashboard
+  ansible.builtin.template:
+    src: provisioning/dashboards/go_app_dashboard.json.j2
+    dest: /var/lib/grafana/dashboards/go_app_dashboard.json
+    owner: grafana
+    group: grafana
+    mode: "0644"
+  notify: restart grafana
+
+- name: Enable and start Grafana
+  become: yes
+  ansible.builtin.systemd:
+    name: grafana-server
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Wait for Grafana to be ready
+  ansible.builtin.uri:
+    url: http://localhost:3000/api/health
+    status_code: 200
+  register: result
+  until: result.status == 200
+  retries: 30
+  delay: 2
+  ignore_errors: yes

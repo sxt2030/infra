@@ -21,10 +21,10 @@ output "full_domain" {
 output "dns_configuration" {
   description = "DNS A record to add to your domain registrar"
   value = {
-    type   = "A"
-    name   = var.subdomain
-    value  = google_compute_global_forwarding_rule.app_forwarding_rule.ip_address
-    ttl    = 300
+    type  = "A"
+    name  = var.subdomain
+    value = google_compute_global_forwarding_rule.app_forwarding_rule.ip_address
+    ttl   = 300
   }
 }
 
