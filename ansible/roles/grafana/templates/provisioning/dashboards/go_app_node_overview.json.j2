@@ -1,0 +1,303 @@
+{
+  "title": "Go Application Monitoring Dashboard",
+  "tags": ["go", "application", "monitoring"],
+  "timezone": "browser",
+  "schemaVersion": 27,
+  "version": 0,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Application Health Overview",
+      "gridPos": {"h":1,"w":24,"x":0,"y":0},
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total Instances",
+      "gridPos": {"h":4,"w":6,"x":0,"y":1},
+      "targets":[{
+        "expr":"count(up{job=\"go_app\"})",
+        "legendFormat":"Instances",
+        "refId":"A"
+      }],
+      "datasource": {"type": "prometheus", "uid": "prometheus"}
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Total Goroutines",
+      "gridPos": {"h":4,"w":6,"x":6,"y":1},
+      "targets":[{
+        "expr":"sum(go_goroutines{job=\"go_app\"})",
+        "legendFormat":"Goroutines",
+        "refId":"A"
+      }],
+      "datasource": {"type": "prometheus", "uid": "prometheus"}
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Memory Usage (MB)",
+      "gridPos": {"h":4,"w":6,"x":12,"y":1},
+      "targets":[{
+        "expr":"sum(go_memstats_alloc_bytes{job=\"go_app\"}) / 1024 / 1024",
+        "legendFormat":"Memory",
+        "refId":"A"
+      }],
+      "datasource": {"type": "prometheus", "uid": "prometheus"}
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "GC Rate",
+      "gridPos": {"h":4,"w":6,"x":18,"y":1},
+      "targets":[{
+        "expr":"sum(rate(go_gc_duration_seconds_count{job=\"go_app\"}[5m]))",
+        "legendFormat":"GC/sec",
+        "refId":"A"
+      }],
+      "datasource": {"type": "prometheus", "uid": "prometheus"}
+    },
+    {
+      "id": 6,
+      "type": "row",
+      "title": "Performance Metrics",
+      "gridPos": {"h":1,"w":24,"x":0,"y":5},
+      "collapsed": false
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Goroutines by Instance",
+      "gridPos": {"h":8,"w":12,"x":0,"y":6},
+      "targets":[{
+        "expr":"go_goroutines{job=\"go_app\"}",
+        "legendFormat":"{{ {{instance}} }}",
+        "refId":"A"
+      }],
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Memory Allocation Rate",
+      "gridPos": {"h":8,"w":12,"x":12,"y":6},
+      "targets":[{
+        "expr":"rate(go_memstats_alloc_bytes_total{job=\"go_app\"}[5m])",
+        "legendFormat":"{{ {{instance}} }}",
+        "refId":"A"
+      }],
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "Garbage Collection",
+      "gridPos": {"h":1,"w":24,"x":0,"y":14},
+      "collapsed": false
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "GC Duration (Average)",
+      "gridPos": {"h":8,"w":12,"x":0,"y":15},
+      "targets":[{
+        "expr":"rate(go_gc_duration_seconds_sum{job=\"go_app\"}[5m]) / rate(go_gc_duration_seconds_count{job=\"go_app\"}[5m])",
+        "legendFormat":"{{ {{instance}} }}",
+        "refId":"A"
+      }],
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "GC Collections Rate",
+      "gridPos": {"h":8,"w":12,"x":12,"y":15},
+      "targets":[{
+        "expr":"rate(go_gc_duration_seconds_count{job=\"go_app\"}[5m])",
+        "legendFormat":"{{ {{instance}} }}",
+        "refId":"A"
+      }],
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "row",
+      "title": "Memory Details",
+      "gridPos": {"h":1,"w":24,"x":0,"y":23},
+      "collapsed": false
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Heap Memory Usage",
+      "gridPos": {"h":8,"w":12,"x":0,"y":24},
+      "targets":[
+        {
+          "expr":"go_memstats_heap_alloc_bytes{job=\"go_app\"}",
+          "legendFormat":"{{ {{instance}} }} - Heap Alloc",
+          "refId":"A"
+        },
+        {
+          "expr":"go_memstats_heap_inuse_bytes{job=\"go_app\"}",
+          "legendFormat":"{{ {{instance}} }} - Heap InUse",
+          "refId":"B"
+        }
+      ],
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "System Memory",
+      "gridPos": {"h":8,"w":12,"x":12,"y":24},
+      "targets":[{
+        "expr":"go_memstats_sys_bytes{job=\"go_app\"}",
+        "legendFormat":"{{ {{instance}} }}",
+        "refId":"A"
+      }],
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "Instance Status",
+      "gridPos": {"h":1,"w":24,"x":0,"y":32},
+      "collapsed": false
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Instances Status",
+      "gridPos": {"h":8,"w":24,"x":0,"y":33},
+      "targets":[{
+        "expr":"up{job=\"go_app\"}",
+        "legendFormat":"{{ {{instance}} }}",
+        "refId":"A",
+        "instant": true
+      }],
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": true,
+          "calcs": ["lastNotNull"]
+        },
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

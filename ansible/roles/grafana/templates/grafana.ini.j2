@@ -1,53 +1,24 @@
-#################################### Server ####################################
 [server]
-# Используем HTTP (без HTTPS)
 protocol = http
-
-# Адрес, на котором слушает Grafana
 http_addr = 0.0.0.0
-
-# Порт Grafana
 http_port = 3000
-
-# Домен, по которому будет доступна Grafana
-domain = {{ domain_name | default(inventory_hostname) }}
-
-# Не принуждаем к домену, чтобы можно было подключаться и по IP
+domain = {{ grafana_domain | default(inventory_hostname) }}
 enforce_domain = false
-
-# Полный публичный URL (указываем без порта, если используем Nginx)
-root_url = http://{{ domain_name | default(inventory_hostname) }}:3000/
-
-# Не используем поддиректорию
+root_url = http://{{ grafana_domain | default(inventory_hostname) }}
 serve_from_sub_path = false
 
-
-#################################### Security ####################################
 [security]
-# Разрешаем вход без HTTPS
 cookie_secure = false
 allow_embedding = true
-# Задаём дефолтные учётные данные
-admin_user = {{ grafana_admin_user | default('admin') }}
-admin_password = {{ grafana_admin_password | default('123456') }}
 
-
-#################################### Users ####################################
 [users]
 default_theme = light
 allow_sign_up = false
 
-
-#################################### Auth ####################################
 [auth.anonymous]
 enabled = false
 
-
-#################################### Logs ####################################
 [log]
 mode = console
 level = info
 
-#################################### Provisioning ####################################
-[paths]
-provisioning = /etc/grafana/provisioning

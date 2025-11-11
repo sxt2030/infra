@@ -1,0 +1,74 @@
+---
+- name: Install dependencies
+  become: yes
+  ansible.builtin.apt:
+    name:
+      - unzip
+      - wget
+    state: present
+    update_cache: yes
+
+- name: Download Promtail binary
+  become: yes
+  ansible.builtin.get_url:
+    url: https://github.com/grafana/loki/releases/download/v2.9.3/promtail-linux-amd64.zip
+    dest: /tmp/promtail.zip
+    mode: '0644'
+
+- name: Unpack Promtail
+  become: yes
+  ansible.builtin.unarchive:
+    src: /tmp/promtail.zip
+    dest: /usr/local/bin/
+    remote_src: yes
+
+- name: Ensure Promtail binary is executable
+  become: yes
+  ansible.builtin.file:
+    path: /usr/local/bin/promtail-linux-amd64
+    mode: "0755"
+
+- name: Create Promtail config directory
+  become: yes
+  ansible.builtin.file:
+    path: /etc/promtail
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy Promtail config
+  become: yes
+  ansible.builtin.template:
+    src: promtail-config.yml.j2
+    dest: /etc/promtail/promtail-config.yml
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create Promtail systemd service
+  become: yes
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/promtail.service
+    content: |
+      [Unit]
+      Description=Promtail Service
+      After=network.target docker.service
+      Requires=docker.service
+
+      [Service]
+      ExecStart=/usr/local/bin/promtail-linux-amd64 --config.file=/etc/promtail/promtail-config.yml
+      Restart=always
+      User=root
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd and start Promtail
+  become: yes
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    name: promtail
+    enabled: yes
+    state: started
+

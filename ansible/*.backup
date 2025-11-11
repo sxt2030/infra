@@ -1,0 +1,171 @@
+{
+  "title": "Go Application Monitoring Dashboard",
+  "tags": ["go", "application", "monitoring"],
+  "timezone": "browser",
+  "schemaVersion": 27,
+  "version": 0,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Application Health Overview",
+      "gridPos": {"h":1,"w":24,"x":0,"y":0},
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total Instances",
+      "gridPos": {"h":4,"w":6,"x":0,"y":1},
+      "targets":[{"expr":"count(up{job=\"go_app\"})","legendFormat":"Instances","refId":"A"}],
+      "datasource":"Prometheus"
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Total Goroutines",
+      "gridPos": {"h":4,"w":6,"x":6,"y":1},
+      "targets":[{"expr":"sum(go_goroutines{job=\"go_app\"})","legendFormat":"Goroutines","refId":"A"}],
+      "datasource":"Prometheus"
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Memory Usage (MB)",
+      "gridPos": {"h":4,"w":6,"x":12,"y":1},
+      "targets":[{"expr":"sum(go_memstats_alloc_bytes{job=\"go_app\"}) / 1024 / 1024","legendFormat":"Memory","refId":"A"}],
+      "datasource":"Prometheus"
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "GC Rate",
+      "gridPos": {"h":4,"w":6,"x":18,"y":1},
+      "targets":[{"expr":"sum(rate(go_gc_duration_seconds_count{job=\"go_app\"}[5m]))","legendFormat":"GC/sec","refId":"A"}],
+      "datasource":"Prometheus"
+    },
+    {
+      "id": 6,
+      "type": "row",
+      "title": "Performance Metrics",
+      "gridPos": {"h":1,"w":24,"x":0,"y":5},
+      "collapsed": false
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Goroutines by Instance",
+      "gridPos": {"h":8,"w":12,"x":0,"y":6},
+      "targets":[
+        {% for host in app_instances %}
+        {"expr":"go_goroutines{job=\"go_app\",instance='{{ host }}'}","legendFormat":"{{ host }}","refId":"{{ loop.index }}"}{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ],
+      "datasource":"Prometheus"
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Memory Allocation Rate",
+      "gridPos": {"h":8,"w":12,"x":12,"y":6},
+      "targets":[
+        {% for host in app_instances %}
+        {"expr":"rate(go_memstats_alloc_bytes_total{job=\"go_app\",instance='{{ host }}'}[5m])","legendFormat":"{{ host }}","refId":"{{ loop.index }}"}{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ],
+      "datasource":"Prometheus"
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "Garbage Collection",
+      "gridPos": {"h":1,"w":24,"x":0,"y":14},
+      "collapsed": false
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "GC Duration (Average)",
+      "gridPos": {"h":8,"w":12,"x":0,"y":15},
+      "targets":[
+        {% for host in app_instances %}
+        {"expr":"rate(go_gc_duration_seconds_sum{job=\"go_app\",instance='{{ host }}'}[5m]) / rate(go_gc_duration_seconds_count{job=\"go_app\",instance='{{ host }}'}[5m])","legendFormat":"{{ host }}","refId":"{{ loop.index }}"}{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ],
+      "datasource":"Prometheus"
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "GC Collections Rate",
+      "gridPos": {"h":8,"w":12,"x":12,"y":15},
+      "targets":[
+        {% for host in app_instances %}
+        {"expr":"rate(go_gc_duration_seconds_count{job=\"go_app\",instance='{{ host }}'}[5m])","legendFormat":"{{ host }}","refId":"{{ loop.index }}"}{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ],
+      "datasource":"Prometheus"
+    },
+    {
+      "id": 12,
+      "type": "row",
+      "title": "Memory Details",
+      "gridPos": {"h":1,"w":24,"x":0,"y":23},
+      "collapsed": false
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Heap Memory Usage",
+      "gridPos": {"h":8,"w":12,"x":0,"y":24},
+      "targets":[
+        {% for host in app_instances %}
+        {"expr":"go_memstats_heap_alloc_bytes{job=\"go_app\",instance='{{ host }}'}","legendFormat":"{{ host }} - Heap Alloc","refId":"A{{ loop.index }}"},
+        {"expr":"go_memstats_heap_inuse_bytes{job=\"go_app\",instance='{{ host }}'}","legendFormat":"{{ host }} - Heap InUse","refId":"B{{ loop.index }}"}{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ],
+      "datasource":"Prometheus"
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "System Memory",
+      "gridPos": {"h":8,"w":12,"x":12,"y":24},
+      "targets":[
+        {% for host in app_instances %}
+        {"expr":"go_memstats_sys_bytes{job=\"go_app\",instance='{{ host }}'}","legendFormat":"{{ host }}","refId":"{{ loop.index }}"}{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ],
+      "datasource":"Prometheus"
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "Instance Status",
+      "gridPos": {"h":1,"w":24,"x":0,"y":32},
+      "collapsed": false
+    }
+    {% for host in app_instances %}
+    ,{
+      "id": {{ 16 + loop.index0 }},
+      "type": "stat",
+      "title": "{{ host }}",
+      "gridPos": {
+        "h":4,
+        "w":4,
+        "x": {{ (loop.index0 % 6) * 4 }},
+        "y": {{ 33 + (loop.index0 // 6) * 4 }}
+      },
+      "targets":[{"expr":"up{job=\"go_app\",instance='{{ host }}'}","legendFormat":"Status","refId":"A"}],
+      "datasource":"Prometheus",
+      "options": {"colorMode":"background","graphMode":"none","justifyMode":"center","textMode":"value_and_name"}
+    }
+    {% endfor %}
+  ]
+}
+

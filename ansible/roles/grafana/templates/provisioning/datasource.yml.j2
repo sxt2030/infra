@@ -3,6 +3,6 @@ datasources:
   - name: Prometheus
     type: prometheus
     access: proxy
-    url: http://{{ hostvars['prometheus-vm'].internal_ip }}:9090
+    url: http://{{ prometheus_vm.internal_ip }}:9090
     isDefault: true
 

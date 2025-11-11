@@ -9,7 +9,7 @@
     state: present
     update_cache: yes
 
-- name: Add Grafana APT repo manually
+- name: Add Grafana APT repo
   become: yes
   ansible.builtin.shell: |
     echo "deb https://packages.grafana.com/oss/deb stable main" > /etc/apt/sources.list.d/grafana.list
@@ -46,15 +46,6 @@
     mode: '0644'
   notify: restart grafana
 
-- name: Deploy Prometheus datasource
-  ansible.builtin.template:
-    src: provisioning/datasources/prometheus.yml.j2
-    dest: /etc/grafana/provisioning/datasources/prometheus.yml
-    owner: grafana
-    group: grafana
-    mode: "0644"
-  notify: restart grafana
-
 - name: Deploy dashboards provisioning config
   ansible.builtin.copy:
     dest: /etc/grafana/provisioning/dashboards/dashboards.yml
@@ -85,23 +76,48 @@
     mode: "0644"
   notify: restart grafana
 
-- name: Copy system overview dashboard
-  ansible.builtin.copy:
-    src: system_app_overview_dashboard.json
-    dest: /var/lib/grafana/dashboards/system_app_overview.json
+- name: Deploy Go Application dashboard
+  ansible.builtin.template:
+    src: provisioning/dashboards/go_app_node_overview.json.j2
+    dest: /var/lib/grafana/dashboards/go_app_node_overview.json
+    owner: grafana
+    group: grafana
+    mode: "0644"
+  vars:
+    app_instances: "{{ groups['app_servers'] | default([]) }}"
+  notify: restart grafana
+
+- name: Deploy Prometheus datasource
+  ansible.builtin.template:
+    src: provisioning/datasources/prometheus.yml.j2
+    dest: /etc/grafana/provisioning/datasources/prometheus.yml
     owner: grafana
     group: grafana
     mode: '0644'
+  vars:
+    prometheus_host: "{{ hostvars['prometheus-vm'].internal_ip | default('localhost') }}"
   notify: restart grafana
 
-- name: Deploy Go Application dashboard
+- name: Deploy Loki datasource
   ansible.builtin.template:
-    src: provisioning/dashboards/go_app_dashboard.json.j2
-    dest: /var/lib/grafana/dashboards/go_app_dashboard.json
+    src: provisioning/datasources/loki.yml.j2
+    dest: /etc/grafana/provisioning/datasources/loki.yml
+    owner: grafana
+    group: grafana
+    mode: '0644'
+  vars:
+    loki_host: "{{ hostvars['grafana-vm'].internal_ip | default('localhost') }}"
+  notify: restart grafana
+
+- name: Deploy Go App Logs dashboard
+  ansible.builtin.template:
+    src: provisioning/dashboards/go_app_logs.json.j2
+    dest: /var/lib/grafana/dashboards/go_app_logs.json
     owner: grafana
     group: grafana
     mode: "0644"
   notify: restart grafana
+
 
 - name: Enable and start Grafana
   become: yes
@@ -120,3 +136,10 @@
   retries: 30
   delay: 2
   ignore_errors: yes
+
+# Handlers
+- name: restart grafana
+  ansible.builtin.systemd:
+    name: grafana-server
+    state: restarted
+

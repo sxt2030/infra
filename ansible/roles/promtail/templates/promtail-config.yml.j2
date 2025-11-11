@@ -1,0 +1,98 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: http://{{ hostvars[groups['grafana'][0]].internal_ip }}:3100/loki/api/v1/push
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+    batchwait: 1s
+    batchsize: 1048576
+    timeout: 10s
+
+scrape_configs:
+  # ========================================
+  # Системные логи (например /var/log/*.log)
+  # ========================================
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          host: {{ ansible_hostname }}
+          __path__: /var/log/*.log
+
+  # ========================================
+  # Логи Go App из Docker (skillbox-app)
+  # ========================================
+  - job_name: go_app
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 10s
+        filters:
+          - name: name
+            values: [skillbox-app]
+
+    relabel_configs:
+      # Job label для Loki (обязательно)
+      - replacement: go_app
+        target_label: job
+
+      # Добавляем hostname
+      - replacement: {{ ansible_hostname }}
+        target_label: host
+
+      # Путь к логам контейнера
+      - source_labels: [__meta_docker_container_id]
+        target_label: __path__
+        replacement: /var/lib/docker/containers/${__meta_docker_container_id}/${__meta_docker_container_id}-json.log
+
+      # Container ID как label
+      - source_labels: [__meta_docker_container_id]
+        target_label: container_id
+
+      # Image как label
+      - source_labels: [__meta_docker_container_image]
+        target_label: image
+
+    pipeline_stages:
+      # Парсинг Docker JSON формата
+      - json:
+          expressions:
+            output: log
+            stream: stream
+            time: time
+
+      # Timestamp из Docker
+      - timestamp:
+          source: time
+          format: RFC3339Nano
+
+      # Парсим JSON из Go приложения, если есть
+      - json:
+          expressions:
+            level: level
+            message: message
+            msg: msg
+            timestamp: timestamp
+            trace_id: trace_id
+            user_id: user_id
+            request_id: request_id
+          source: output
+
+      # Добавляем level и stream как метки
+      - labels:
+          level:
+          stream:
+
+      # Output = сам лог без Docker обёртки
+      - output:
+          source: output
+

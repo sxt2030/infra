@@ -1,0 +1,10 @@
+- hosts: grafana-vm
+  roles:
+    - loki
+  become: true
+
+- hosts: app_servers
+  roles:
+    - promtail
+  become: true
+

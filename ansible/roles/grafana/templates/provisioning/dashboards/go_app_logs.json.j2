@@ -1,0 +1,52 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "logs",
+      "title": "Go App Logs",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 12},
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "{job=\"go_app\"}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showLabels": true,
+        "showTime": true,
+        "wrapLogMessage": true
+      }
+    },
+    {
+      "type": "graph",
+      "title": "Go App Log Rate",
+      "gridPos": {"x": 0, "y": 12, "w": 24, "h": 8},
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "count_over_time({job=\"go_app\"}[1m])",
+          "legendFormat": "logs per minute",
+          "refId": "B"
+        }
+      ],
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "Logs/min",
+          "logBase": 1
+        },
+        {
+          "format": "short"
+        }
+      ]
+    }
+  ],
+  "title": "Go App Logs Overview",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "30s"
+}
+

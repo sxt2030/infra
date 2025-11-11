@@ -1,0 +1,76 @@
+---
+- name: Install dependencies
+  become: yes
+  ansible.builtin.apt:
+    name: [unzip, wget]
+    state: present
+    update_cache: yes
+
+- name: Download Loki binary
+  become: yes
+  ansible.builtin.get_url:
+    url: https://github.com/grafana/loki/releases/download/v2.9.3/loki-linux-amd64.zip
+    dest: /tmp/loki.zip
+    mode: '0644'
+
+- name: Unpack Loki
+  become: yes
+  ansible.builtin.unarchive:
+    src: /tmp/loki.zip
+    dest: /usr/local/bin/
+    remote_src: yes
+
+- name: Ensure Loki binary is executable
+  become: yes
+  ansible.builtin.file:
+    path: /usr/local/bin/loki-linux-amd64
+    mode: "0755"
+
+- name: Create Loki directories
+  become: yes
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - /etc/loki
+    - /var/lib/loki
+    - /var/lib/loki/chunks
+    - /var/lib/loki/index
+
+- name: Deploy Loki config
+  become: yes
+  ansible.builtin.template:
+    src: loki-config.yml.j2
+    dest: /etc/loki/loki-config.yml
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Create Loki systemd service
+  become: yes
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/loki.service
+    content: |
+      [Unit]
+      Description=Loki Log Aggregation
+      After=network.target
+
+      [Service]
+      ExecStart=/usr/local/bin/loki-linux-amd64 --config.file=/etc/loki/loki-config.yml
+      Restart=always
+      User=root
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd and start Loki
+  become: yes
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    name: loki
+    enabled: yes
+    state: started
+

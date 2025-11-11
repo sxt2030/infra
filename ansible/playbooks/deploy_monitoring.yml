@@ -2,6 +2,10 @@
 - name: Deploy Prometheus stack
   hosts: prometheus
   become: yes
+  vars:
+    prometheus_config_template: prometheus.yml.j2
+  vars_files:
+    - ../inventory/terraform.yml
   tags:
     - prometheus
     - monitoring
@@ -13,6 +17,8 @@
 - name: Deploy Grafana stack
   hosts: grafana
   become: yes
+  vars_files:
+    - ../inventory/terraform.yml
   tags:
     - grafana
     - monitoring
@@ -20,9 +26,14 @@
     - grafana
     - nginx_reverse_proxy
 
-- hosts: app_servers
+- name: Configure Node Exporter on app servers
+  hosts: app_servers
   become: yes
+  vars_files:
+    - ../inventory/terraform.yml
+  tags:
+    - node_exporter
+    - monitoring
   roles:
     - node_exporter
-    
 
