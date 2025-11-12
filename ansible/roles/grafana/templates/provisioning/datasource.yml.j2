@@ -1,8 +1,15 @@
 apiVersion: 1
+
 datasources:
   - name: Prometheus
     type: prometheus
     access: proxy
-    url: http://{{ prometheus_vm.internal_ip }}:9090
+    url: http://{{ hostvars[groups['prometheus'][0]].internal_ip }}:9090
     isDefault: true
+
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://{{ hostvars[groups['grafana'][0]].internal_ip }}:3100
+    isDefault: false
 

@@ -27,7 +27,7 @@
         "legendFormat":"Instances",
         "refId":"A"
       }],
-      "datasource": {"type": "prometheus", "uid": "prometheus"}
+      "datasource": "Prometheus"
     },
     {
       "id": 3,
@@ -39,7 +39,7 @@
         "legendFormat":"Goroutines",
         "refId":"A"
       }],
-      "datasource": {"type": "prometheus", "uid": "prometheus"}
+      "datasource": "Prometheus"
     },
     {
       "id": 4,
@@ -51,7 +51,7 @@
         "legendFormat":"Memory",
         "refId":"A"
       }],
-      "datasource": {"type": "prometheus", "uid": "prometheus"}
+      "datasource": "Prometheus"
     },
     {
       "id": 5,
@@ -63,7 +63,7 @@
         "legendFormat":"GC/sec",
         "refId":"A"
       }],
-      "datasource": {"type": "prometheus", "uid": "prometheus"}
+      "datasource": "Prometheus"
     },
     {
       "id": 6,
@@ -79,10 +79,10 @@
       "gridPos": {"h":8,"w":12,"x":0,"y":6},
       "targets":[{
         "expr":"go_goroutines{job=\"go_app\"}",
-        "legendFormat":"{{ {{instance}} }}",
+        "legendFormat":"{{ "{{instance}}" }}",
         "refId":"A"
       }],
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -102,10 +102,10 @@
       "gridPos": {"h":8,"w":12,"x":12,"y":6},
       "targets":[{
         "expr":"rate(go_memstats_alloc_bytes_total{job=\"go_app\"}[5m])",
-        "legendFormat":"{{ {{instance}} }}",
+        "legendFormat":"{{ "{{instance}}" }}",
         "refId":"A"
       }],
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
           "unit": "Bps",
@@ -133,10 +133,10 @@
       "gridPos": {"h":8,"w":12,"x":0,"y":15},
       "targets":[{
         "expr":"rate(go_gc_duration_seconds_sum{job=\"go_app\"}[5m]) / rate(go_gc_duration_seconds_count{job=\"go_app\"}[5m])",
-        "legendFormat":"{{ {{instance}} }}",
+        "legendFormat":"{{ "{{instance}}" }}",
         "refId":"A"
       }],
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -157,10 +157,10 @@
       "gridPos": {"h":8,"w":12,"x":12,"y":15},
       "targets":[{
         "expr":"rate(go_gc_duration_seconds_count{job=\"go_app\"}[5m])",
-        "legendFormat":"{{ {{instance}} }}",
+        "legendFormat":"{{ "{{instance}}" }}",
         "refId":"A"
       }],
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
           "unit": "ops",
@@ -189,16 +189,16 @@
       "targets":[
         {
           "expr":"go_memstats_heap_alloc_bytes{job=\"go_app\"}",
-          "legendFormat":"{{ {{instance}} }} - Heap Alloc",
+          "legendFormat":"{{ "{{instance}}" }} - Heap Alloc",
           "refId":"A"
         },
         {
           "expr":"go_memstats_heap_inuse_bytes{job=\"go_app\"}",
-          "legendFormat":"{{ {{instance}} }} - Heap InUse",
+          "legendFormat":"{{ "{{instance}}" }} - Heap InUse",
           "refId":"B"
         }
       ],
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
@@ -219,10 +219,10 @@
       "gridPos": {"h":8,"w":12,"x":12,"y":24},
       "targets":[{
         "expr":"go_memstats_sys_bytes{job=\"go_app\"}",
-        "legendFormat":"{{ {{instance}} }}",
+        "legendFormat":"{{ "{{instance}}" }}",
         "refId":"A"
       }],
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
@@ -250,11 +250,11 @@
       "gridPos": {"h":8,"w":24,"x":0,"y":33},
       "targets":[{
         "expr":"up{job=\"go_app\"}",
-        "legendFormat":"{{ {{instance}} }}",
+        "legendFormat":"{{ "{{instance}}" }}",
         "refId":"A",
         "instant": true
       }],
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "datasource": "Prometheus",
       "options": {
         "colorMode": "background",
         "graphMode": "none",
